@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import json
 import os
+import pandas as pd
 
 
 # Read the API URL from the environment variable or use local host as default
@@ -54,9 +55,16 @@ if task_file is not None:
             if tasks_response.status_code == 200:
                 tasks_data = tasks_response.json()
                 tasks_list = tasks_data.get('tasks', [])
-                for idx, task in enumerate(tasks_list, start=1):
-                    st.write(f"**Task {idx}:** {task['task_description']}")
-                    st.write(f"Cost: ${task['task_cost']}")
+
+                if tasks_list:
+                    tasks_df = pd.DataFrame(tasks_list)
+                    tasks_df.rename(columns={
+                        'task_description': 'Task Description',
+                        'task_cost': 'Cost'
+                    }, inplace=True)
+                    st.dataframe(tasks_df, height=300)
+                else:
+                    st.write("No tasks to display.")
             else:
                 st.error("Failed to retrieve tasks for display.")
     else:
