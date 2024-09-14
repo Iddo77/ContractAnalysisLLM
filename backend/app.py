@@ -1,25 +1,45 @@
-import csv
 import os
-import pandas as pd
-from fastapi import FastAPI, UploadFile, File
-from fastapi.responses import JSONResponse, Response
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from backend.file_utils import extract_text_from_docx, read_tasks_from_csv, read_tasks_from_excel
 from backend.models import (
     ContractUploadResponse,
     TaskUploadResponse,
     TaskAnalysisResponse,
     TaskAnalysisResult,
 )
-from docx import Document
-from io import BytesIO
+from backend.session_manager import create_session, get_session, set_session_data
 
 
 app = FastAPI()
 
+# Allow CORS for all origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 __version__ = "0.1.0"
 
-# Global variables to store uploaded data (for simplicity)
-contract_json = None
-tasks = []
+
+@app.middleware("http")
+async def add_session_id(request: Request, call_next):
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        session_id = create_session()
+    request.state.session_id = session_id
+
+    # Proceed to process the request
+    response = await call_next(request)
+
+    # If session_id cookie was not set, set it in the response
+    if not request.cookies.get("session_id"):
+        response.set_cookie(key="session_id", value=session_id, httponly=True)
+    return response
 
 
 @app.get('/version')
@@ -28,78 +48,98 @@ def version():
 
 
 @app.post("/upload_contract", response_model=ContractUploadResponse)
-async def upload_contract(file: UploadFile = File(...)):
-    # Read the uploaded file
-    content = await file.read()
-    global contract_json
+async def upload_contract(request: Request, file: UploadFile = File(...)):
+    try:
+        content = await file.read()
+        filename = file.filename
+        file_extension = os.path.splitext(filename)[1].lower()
 
-    # Determine the file type based on the filename or content type
-    filename = file.filename
-    file_extension = os.path.splitext(filename)[1].lower()
+        if file_extension == '.docx':
+            contract_text = extract_text_from_docx(content)
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file type. Please upload a DOCX or TXT file.")
 
-    if file_extension == '.docx':
-        document = Document(BytesIO(content))
-        contract_text = '\n'.join([para.text for para in document.paragraphs])
-    else:
-        return JSONResponse(
-            content={"message": "Unsupported file type. Please upload a DOCX file."},
-            status_code=400
+        # TODO Use LLM to extract contract terms and store in contract_json
+        contract_json = dict()
+
+        # Store in session
+        session_id = request.state.session_id
+        set_session_data(session_id, "contract_json", contract_json)
+
+        return ContractUploadResponse(
+            message="Contract uploaded and processed successfully.",
+            contract_filename=filename
         )
-
-    # Use LLM to extract contract terms and store in contract_json
-    # Implement your extract_contract_terms function
-    # contract_json = extract_contract_terms(contract_text)
-
-    return ContractUploadResponse(
-        message="Contract uploaded and processed successfully.",
-        contract_filename=filename
-    )
+    except Exception as e:
+        return JSONResponse(
+            content={"message": f"An error occurred while processing the contract: {str(e)}"},
+            status_code=500
+        )
 
 
 @app.post("/upload_tasks", response_model=TaskUploadResponse)
-async def upload_tasks(file: UploadFile = File(...)):
-    global tasks
-    content = await file.read()
-    filename = file.filename
-    file_extension = os.path.splitext(filename)[1].lower()
+async def upload_tasks(request: Request, file: UploadFile = File(...)):
+    try:
+        content = await file.read()
+        filename = file.filename
+        file_extension = os.path.splitext(filename)[1].lower()
 
-    # Read the file into a pandas DataFrame
-    if file_extension == '.csv':
-        df = pd.read_csv(BytesIO(content))
-    elif file_extension == '.xlsx':
-        df = pd.read_excel(BytesIO(content))
-    else:
+        if file_extension == '.csv':
+            tasks = read_tasks_from_csv(content)
+        elif file_extension == '.xlsx':
+            tasks = read_tasks_from_excel(content)
+        else:
+            return JSONResponse(
+                content={"message": "Unsupported file type. Please upload a CSV or XLSX file."},
+                status_code=400
+            )
+
+        # Store tasks in session
+        session_id = request.state.session_id
+        set_session_data(session_id, "tasks", tasks)
+
+        return TaskUploadResponse(
+            message="Tasks uploaded successfully.",
+            tasks_uploaded=len(tasks)
+        )
+    except Exception as e:
         return JSONResponse(
-            content={"message": "Unsupported file type. Please upload a CSV or XLSX file."},
-            status_code=400
+            content={"message": f"An error occurred while processing the tasks: {str(e)}"},
+            status_code=500
         )
 
-    # Process the DataFrame
-    tasks = []
-    for index, row in df.iterrows():
-        task_description = row['Task Description']
-        amount_str = str(row['Amount'])
-        # Remove any currency symbols and commas, and convert to float
-        task_cost = float(amount_str.replace('$', '').replace(',', '').strip())
-        tasks.append({
-            "task_description": task_description,
-            "task_cost": task_cost
-        })
 
-    return TaskUploadResponse(
-        message="Tasks uploaded successfully.",
-        tasks_uploaded=len(tasks)
-    )
+@app.get("/get_tasks")
+def get_tasks(request: Request):
+    # Retrieve tasks from session
+    session_id = request.state.session_id
+    session_data = get_session(session_id)
+    tasks = session_data.get("tasks")
+
+    if not tasks:
+        return JSONResponse(
+            content={"message": "No tasks found in session."},
+            status_code=404
+        )
+
+    return {"tasks": tasks}
 
 
 @app.get("/analyze_tasks", response_model=TaskAnalysisResponse)
-def analyze_tasks():
-    # Ensure contract and tasks are uploaded
+def analyze_tasks(request: Request):
+    # Retrieve data from session
+    session_id = request.state.session_id
+    session_data = get_session(session_id)
+
+    contract_json = session_data.get("contract_json")
+    tasks = session_data.get("tasks")
+
     if contract_json is None or not tasks:
         return JSONResponse(
             content={"message": "Contract and tasks must be uploaded before analysis."},
             status_code=400
         )
+
     # TODO: Use LLM to analyze tasks against contract_json
     results = []
     for task in tasks:
@@ -113,7 +153,6 @@ def analyze_tasks():
             applicable_terms=["Term 1", "Term 2"]  # Replace with actual terms
         )
         results.append(result)
-    return TaskAnalysisResponse(results=results)
 
 
 if __name__ == "__main__":

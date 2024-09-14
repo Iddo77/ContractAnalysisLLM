@@ -40,14 +40,7 @@ Follow these steps to set up the project:
 
 4. **Set Up OpenAI API Key**
 
-   Obtain an API key from OpenAI and set it as an environment variable:
-   Linux/macOS:
-
-          export OPENAI_API_KEY='your-openai-api-key'
-
-   Windows (PowerShell):
-   
-         [System.Environment]::SetEnvironmentVariable("OPENAI_API_KEY", "your-openai-api-key", "User")
+   Obtain an API key from OpenAI and set it as an environment variable OPENAI_API_KEY.
 
 5. **Project Structure**
 
@@ -55,24 +48,27 @@ Follow these steps to set up the project:
    - **frontend**: Contains the user interface built with Streamlit.
    - **backend**: Contains the server-side code, using FastAPI.
 
-6. **Running the Application**
-   Navigate to the project root and make sure the Conda environment is activated:
+6. **Set Up a Secret Key**
+   
+   Execute the following command in the terminal (the conda environment should be activated):
 
-	conda activate ContractAnalysisLLM
+	python -m secret
 
+   Copy the key and use it to set the environment variable CONTRACT_ANALYSIS_LLM_SECRET.
+
+7. **Running the Backend**
    Start the backend server using the following command:
 
       python -m uvicorn backend.app:app --host 0.0.0.0 --port 8008
 
+8. **Running the Frontend**
 
-   Open a new terminal for the frontend, navigate to the project root and make sure the Conda environment is activated.
+   Open a new terminal for the frontend, navigate to the project root and make sure the Conda environment is activated:
+
+	conda activate ContractAnalysisLLM
+	
    Start the Streamlit app using the following command:
 
       python -m streamlit run frontend/app.py
    
-   If the frontend and backend are running on different machines, you need to set the backend URL to the environment variable CONTRACT_ANALYSIS_LLM_API.
-
-
-
-
-   
+   If the frontend and backend are running on different machines, you need to set the backend URL on the frontend machine to the environment variable CONTRACT_ANALYSIS_LLM_API.
