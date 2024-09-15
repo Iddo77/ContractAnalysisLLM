@@ -20,7 +20,7 @@ if 'contract_json' not in st.session_state:
 st.header("Upload Contract Document")
 contract_file = st.file_uploader("Choose a contract file (DOCX)", type=['docx'], accept_multiple_files=False)
 
-if contract_file is not None:
+if contract_file is not None and st.session_state.contract_json is None:
     # Show progress indicator
     with st.spinner("Uploading and processing contract..."):
         # Send the file to the backend
@@ -31,24 +31,27 @@ if contract_file is not None:
             st.success(f"{data['message']} Filename: {data['contract_filename']}")
 
             # Store the contract JSON
-            contract_json = data['contract_json']
-            st.session_state.contract_json = contract_json
-
-            # Visualize the contract in an expandable panel
-            st.subheader("Extracted Contract")
-            with st.expander("Show/Hide Contract Details", expanded=False):
-                # Display the contract JSON in a structured format
-                st.json(contract_json)
-
-            # Button to download the contract JSON
-            st.download_button(
-                label="Download Contract JSON",
-                data=json.dumps(contract_json, indent=4),
-                file_name="contract.json",
-                mime="application/json"
-            )
+            st.session_state.contract_json = data['contract_json']
         else:
             st.error("Failed to upload and process contract.")
+
+# Display the contract JSON if available
+if st.session_state.contract_json is not None:
+    contract_json = st.session_state.contract_json
+
+    # Visualize the contract in an expandable panel
+    st.subheader("Extracted Contract")
+    with st.expander("Show/Hide Contract Details", expanded=False):
+        # Display the contract JSON in a structured format
+        st.json(contract_json)
+
+    # Button to download the contract JSON
+    st.download_button(
+        label="Download Contract JSON",
+        data=st.session_state.contract_json.encode('utf-8'),  # Encode the string directly to bytes
+        file_name="contract.json",
+        mime="application/json"
+    )
 
 # Step 2: Upload Task CSV
 st.header("Upload Task Descriptions")
