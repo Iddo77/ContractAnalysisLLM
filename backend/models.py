@@ -1,7 +1,7 @@
 # backend/models.py
 
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 
 class ContractUploadResponse(BaseModel):
@@ -30,3 +30,20 @@ class TaskAnalysisResult(BaseModel):
 
 class TaskAnalysisResponse(BaseModel):
     results: List[TaskAnalysisResult]
+
+
+class Term(BaseModel):
+    title: str
+    content: str
+
+
+class Section(BaseModel):
+    title: str
+    terms: List[Term]
+    subsections: List['Section'] = []
+
+
+class Contract(BaseModel):
+    title: str
+    definitions: Dict[str, str]
+    sections: List[Section]

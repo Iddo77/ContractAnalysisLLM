@@ -14,10 +14,6 @@ ContractAnalysisLLM uses GPT and LangChain to:
 
 Follow these steps to set up the project:
 
-## Installation
-
-Follow these steps to set up the project:
-
 1. **Clone the Repository**
 
    Run the following commands:
@@ -40,32 +36,35 @@ Follow these steps to set up the project:
 
 4. **Set Up OpenAI API Key**
 
-   Obtain an API key from OpenAI and set it as an environment variable OPENAI_API_KEY.
+   Obtain an API key from OpenAI and use it to set the environment variable OPENAI_API_KEY.
 
-5. **Project Structure**
+5 **Set Up a Secret Key**
+   
+   Execute the following command in the terminal (the conda environment should be activated):
+
+	  python -m secret
+
+   Copy the key and use it to set the environment variable CONTRACT_ANALYSIS_LLM_SECRET.
+
+## Project Structure
 
    The project consists of two main folders:
    - **frontend**: Contains the user interface built with Streamlit.
    - **backend**: Contains the server-side code, using FastAPI.
 
-6. **Set Up a Secret Key**
-   
-   Execute the following command in the terminal (the conda environment should be activated):
 
-	python -m secret
+## Running the Application
 
-   Copy the key and use it to set the environment variable CONTRACT_ANALYSIS_LLM_SECRET.
-
-7. **Running the Backend**
+1. **Running the Backend**
    Start the backend server using the following command:
 
       python -m uvicorn backend.app:app --host 0.0.0.0 --port 8008
 
-8. **Running the Frontend**
+2. **Running the Frontend**
 
    Open a new terminal for the frontend, navigate to the project root and make sure the Conda environment is activated:
 
-	conda activate ContractAnalysisLLM
+      conda activate ContractAnalysisLLM
 	
    Start the Streamlit app using the following command:
 

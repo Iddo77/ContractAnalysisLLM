@@ -2,6 +2,8 @@ import os
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+
+from backend.contract_term_extraction import ContractTermExtractionAgent
 from backend.file_utils import extract_text_from_docx, read_tasks_from_csv, read_tasks_from_excel
 from backend.models import (
     ContractUploadResponse,
@@ -24,6 +26,9 @@ app.add_middleware(
 )
 
 __version__ = "0.1.0"
+
+
+contract_term_extraction_agent = ContractTermExtractionAgent()
 
 
 @app.middleware("http")
@@ -59,11 +64,11 @@ async def upload_contract(request: Request, file: UploadFile = File(...)):
         else:
             raise HTTPException(status_code=400, detail="Unsupported file type. Please upload a DOCX or TXT file.")
 
-        # TODO Use LLM to extract contract terms and store in contract_json
-        contract_json = dict()
+        contract, contract_json = await contract_term_extraction_agent.extract_contract_terms(contract_text)
 
         # Store in session
         session_id = request.state.session_id
+        set_session_data(session_id, "contract", contract)
         set_session_data(session_id, "contract_json", contract_json)
 
         return ContractUploadResponse(
