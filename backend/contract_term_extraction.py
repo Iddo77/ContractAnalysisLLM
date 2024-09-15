@@ -22,8 +22,8 @@ class ContractTermExtractionAgent:
             'contract_text': contract_text,
             'extra_messages': []
         }
-        agent = invoke_chain_with_error_handling(self.extract_contract_terms_chain, input_data)
-        return agent
+        contract_tuple = invoke_chain_with_error_handling(self.extract_contract_terms_chain, input_data)
+        return contract_tuple
 
 
 def get_extract_contract_terms_chain(llm: ChatOpenAI):

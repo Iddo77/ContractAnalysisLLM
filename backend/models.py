@@ -7,6 +7,7 @@ from typing import List, Optional, Dict
 class ContractUploadResponse(BaseModel):
     message: str
     contract_filename: str
+    contract_json: str
 
 
 class TaskUploadResponse(BaseModel):

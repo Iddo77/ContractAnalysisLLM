@@ -68,12 +68,12 @@ async def upload_contract(request: Request, file: UploadFile = File(...)):
 
         # Store in session
         session_id = request.state.session_id
-        set_session_data(session_id, "contract", contract)
         set_session_data(session_id, "contract_json", contract_json)
 
         return ContractUploadResponse(
             message="Contract uploaded and processed successfully.",
-            contract_filename=filename
+            contract_filename=filename,
+            contract_json=contract_json
         )
     except Exception as e:
         return JSONResponse(
