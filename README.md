@@ -71,3 +71,27 @@ Follow these steps to set up the project:
       python -m streamlit run frontend/app.py
    
    If the frontend and backend are running on different machines, you need to set the backend URL on the frontend machine to the environment variable CONTRACT_ANALYSIS_LLM_API.
+
+
+## How To Use the application
+
+1. In the section 'Upload Contract Document', select a docx file with a contract
+2. Wait for the extraction of the JSON (this might take a while)
+3. Verify the contract JSON by expanding the contract details under Extracted Contract
+4. Download the contract JSON if needed
+5. In the section 'Upload Task Descriptions', select a CSV or Excel file with tasks. The file must contain 2 columns named 'Task Description' and 'Amount'.
+6. Verify the uploaded tasks by expanding the tasks under Uploaded Tasks
+7. Click on the button 'Analyze Tasks'
+8. Wait for the analysis to finish (this might take a while)
+9. Click Download Analysis Results to get the JSON with the results
+
+## Limitations
+This application is a proof of concept (POC). It is not fully tested, and could therefore lack in robustness. 
+Take note of the following:
+- When uploading files, make sure the file type and content are exactly as described in 'How To Use the application'.
+- Do not change the order of uploading files and do not change try to change uploaded files. 
+The UI is not designed to handle this: only the happy path is handled. When the UI does not respond as expected, refresh the page and try again.
+- After an analysis is done, you must refresh the page to try again.
+- Large contracts are not supported. The documents are not chunked into smaller parts. This is out of scope of the POC, because of the limited time frame.
+- The LLM retries several times in case an incorrect JSON is created. Usually this is enough, but sometimes you need to simply refresh the UI and try again.
+- The application is slow: it uses multiple interactions with an LLM. The full analysis can take several minutes.
