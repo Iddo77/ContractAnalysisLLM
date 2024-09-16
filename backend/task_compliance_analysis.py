@@ -1,4 +1,5 @@
 import json
+import asyncio
 from typing import List, Tuple
 
 from langchain_openai import ChatOpenAI
@@ -143,15 +144,15 @@ class TaskComplianceJsonOutputParser(BaseOutputParser):
 async def analyze_tasks_compliance(contract_json: str, tasks: List[dict],
                                    agent: TaskComplianceAnalysisAgent) -> TaskAnalysisResponse:
 
-    results = []
-    for task in tasks:
+    async def analyze_single_task(task):
         task_description = task['task_description']
         task_cost = task['task_cost']
         try:
-            result = await agent.analyze_task_compliance(contract_json=contract_json, task_description=task_description,
-                                                         task_cost=task_cost)
+            return await agent.analyze_task_compliance(contract_json=contract_json,
+                                                       task_description=task_description,
+                                                       task_cost=task_cost)
         except Exception as e:
-            result = TaskAnalysisResult(
+            return TaskAnalysisResult(
                 task_description=task_description,
                 task_cost=task_cost,
                 applicable_terms=[],
@@ -160,6 +161,7 @@ async def analyze_tasks_compliance(contract_json: str, tasks: List[dict],
                 ambiguous=True
             )
 
-        results.append(result)
+    # Gather all analyze_single_task coroutines to run them concurrently
+    results = await asyncio.gather(*(analyze_single_task(task) for task in tasks))
 
     return TaskAnalysisResponse(results=results)
