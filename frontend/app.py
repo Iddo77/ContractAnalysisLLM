@@ -9,13 +9,15 @@ API_URL = os.getenv('CONTRACT_ANALYSIS_LLM_API', 'http://localhost:8008')
 
 st.title("Contract Analysis LLM")
 
-# Initialize session state for cookies, contract JSON, and tasks
+# Initialize session state for cookies, contract JSON, tasks, and analysis results
 if 'cookies' not in st.session_state:
     st.session_state.cookies = None
 if 'contract_json' not in st.session_state:
     st.session_state.contract_json = None
 if 'tasks' not in st.session_state:
     st.session_state.tasks = None
+if 'analysis_result' not in st.session_state:
+    st.session_state.analysis_result = None
 
 # Step 1: Upload Contract
 st.header("Upload Contract Document")
@@ -63,17 +65,14 @@ if task_file is not None and st.session_state.tasks is None:
     # Send the file to the backend
     with st.spinner("Uploading and processing tasks..."):
         files = {'file': (task_file.name, task_file.getvalue(), task_file.type)}
-        print('COOKIES 1: ' + str(st.session_state.cookies))
         response = requests.post(f"{API_URL}/upload_tasks", files=files, cookies=st.session_state.cookies)
         st.session_state.cookies = response.cookies
-        print('COOKIES 2: ' + str(st.session_state.cookies))
         if response.status_code == 200:
             data = response.json()
             st.success(f"{data['message']} Tasks uploaded: {data['tasks_uploaded']}")
             # Store the tasks in the session state
             tasks_response = requests.get(f"{API_URL}/get_tasks", cookies=st.session_state.cookies)
             st.session_state.cookies = tasks_response.cookies
-            print('COOKIES 3: ' + str(st.session_state.cookies))
             if tasks_response.status_code == 200:
                 tasks_data = tasks_response.json()
                 st.session_state.tasks = tasks_data.get('tasks', [])
@@ -103,19 +102,21 @@ if st.button("Analyze Tasks"):
             st.session_state.cookies = response.cookies
             if response.status_code == 200:
                 data = response.json()
+                # Store the analysis result
+                st.session_state.analysis_result = json.dumps(data, indent=4)  # Store as a formatted string
+
+                # Display the analysis results in a structured JSON format
                 st.header("Analysis Results")
-                for result in data['results']:
-                    st.subheader(f"Task: {result['task_description']}")
-                    st.write(f"Cost: ${result['task_cost']}")
-                    st.write("Applicable Terms:")
-                    for term in result['applicable_terms']:
-                        st.write(f"- {term}")
-                    st.write("Reasons:")
-                    st.write(f"{result['reasoning']}")
-                    compliance = "Compliant" if result['compliance'] else "Non-Compliant"
-                    st.write(f"Compliance: **{compliance}**")
-                    if result['ambiguous']:
-                        st.warning("This task has ambiguities that may require further review.")
+                with st.expander("Show/Hide Analysis Details", expanded=False):
+                    st.json(data)
+
+                # Button to download the analysis JSON
+                st.download_button(
+                    label="Download Analysis JSON",
+                    data=st.session_state.analysis_result.encode('utf-8'),  # Encode the string directly to bytes
+                    file_name="analysis_results.json",
+                    mime="application/json"
+                )
             else:
                 st.error("Failed to analyze tasks. Ensure both contract and tasks are uploaded.")
     else:
