@@ -20,22 +20,22 @@ class TaskAnalysisRequest(BaseModel):
     task_costs: List[float]
 
 
+class Term(BaseModel):
+    title: str
+    content: str
+
+
 class TaskAnalysisResult(BaseModel):
     task_description: str
     task_cost: float
+    applicable_terms: List[Term]
+    reasoning: str
     compliance: bool
-    reasons: List[str]
-    ambiguity: bool
-    applicable_terms: List[str]
+    ambiguous: bool
 
 
 class TaskAnalysisResponse(BaseModel):
     results: List[TaskAnalysisResult]
-
-
-class Term(BaseModel):
-    title: str
-    content: str
 
 
 class Section(BaseModel):

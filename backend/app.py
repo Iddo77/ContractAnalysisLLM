@@ -12,7 +12,7 @@ from backend.models import (
     TaskAnalysisResult,
 )
 from backend.session_manager import create_session, get_session, set_session_data
-
+from backend.task_compliance_analysis import TaskComplianceAnalysisAgent, analyze_tasks_compliance
 
 app = FastAPI()
 
@@ -29,6 +29,7 @@ __version__ = "0.1.0"
 
 
 contract_term_extraction_agent = ContractTermExtractionAgent()
+task_compliance_analysis_agent = TaskComplianceAnalysisAgent()
 
 
 @app.middleware("http")
@@ -40,10 +41,8 @@ async def add_session_id(request: Request, call_next):
 
     # Proceed to process the request
     response = await call_next(request)
+    response.set_cookie(key="session_id", value=session_id, httponly=True)
 
-    # If session_id cookie was not set, set it in the response
-    if not request.cookies.get("session_id"):
-        response.set_cookie(key="session_id", value=session_id, httponly=True)
     return response
 
 
@@ -131,7 +130,7 @@ def get_tasks(request: Request):
 
 
 @app.get("/analyze_tasks", response_model=TaskAnalysisResponse)
-def analyze_tasks(request: Request):
+async def analyze_tasks(request: Request):
     # Retrieve data from session
     session_id = request.state.session_id
     session_data = get_session(session_id)
@@ -145,19 +144,8 @@ def analyze_tasks(request: Request):
             status_code=400
         )
 
-    # TODO: Use LLM to analyze tasks against contract_json
-    results = []
-    for task in tasks:
-        # Placeholder analysis
-        result = TaskAnalysisResult(
-            task_description=task['task_description'],
-            task_cost=task['task_cost'],
-            compliance=True,  # Replace with actual compliance result
-            reasons=["Compliant with all applicable terms."],  # Replace with actual reasons
-            ambiguity=False,
-            applicable_terms=["Term 1", "Term 2"]  # Replace with actual terms
-        )
-        results.append(result)
+    results = await analyze_tasks_compliance(contract_json, tasks, task_compliance_analysis_agent)
+    return results
 
 
 if __name__ == "__main__":
