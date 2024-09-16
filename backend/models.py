@@ -15,11 +15,6 @@ class TaskUploadResponse(BaseModel):
     tasks_uploaded: int
 
 
-class TaskAnalysisRequest(BaseModel):
-    task_descriptions: List[str]
-    task_costs: List[float]
-
-
 class Term(BaseModel):
     title: str
     content: str

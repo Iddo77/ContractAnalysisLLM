@@ -8,8 +8,7 @@ from backend.file_utils import extract_text_from_docx, read_tasks_from_csv, read
 from backend.models import (
     ContractUploadResponse,
     TaskUploadResponse,
-    TaskAnalysisResponse,
-    TaskAnalysisResult,
+    TaskAnalysisResponse
 )
 from backend.session_manager import create_session, get_session, set_session_data
 from backend.task_compliance_analysis import TaskComplianceAnalysisAgent, analyze_tasks_compliance
